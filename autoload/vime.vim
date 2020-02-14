@@ -42,16 +42,23 @@ function! VimeComplete(findstart, base)
         "                         that there is no exact match, e.g. 'aa')
         "      or found one of the solutions at bd1
         let range1 = bd1
+        if strpart(g:vimetable[(range1+1)*2], 0, codelen) == a:base
+            " in case of range1 is not the exact index, e.g 'aa'
+            let range1 += 1
+        endif
         while range1 > 0
             let range1 -= 1
-            if g:vimetable[range1*2] != a:base
+            " if they are exactly equal, strpart() does not harm
+            " but incase of solution not found, comparing with strpart() will
+            " prompt potential candidates
+            if strpart(g:vimetable[range1*2], 0, codelen) != a:base
                 let range1 += 1 " restore the -1
                 break
             endif
         endwhile
 
-        let range2 = bd1
-        while range2 < s:numtable - 1
+        let range2 = max([range1, bd1])
+        while range2 < (s:numtable - 1)
             let range2 += 1
             if g:vimetable[range2*2] != a:base
                 let range2 -= 1
@@ -61,16 +68,17 @@ function! VimeComplete(findstart, base)
 
         " Now range1 and range2 are exact matches
         " Now find the prompts, must include the check of range2 again
-        let i = 20 " max additional prompt count
-        while i >= 0 && range2 < s:numtable
-                    \ && strpart(g:vimetable[range2*2], 0, codelen) == a:base
+        let i = 1000 " max additional prompt count
+        while i >= 0 && range2 < (s:numtable - 1)
+                    \ && strpart(g:vimetable[(range2+1)*2], 0, codelen) == a:base
             let i -= 1
             let range2 += 1
         endwhile
-        let range2 -= 1 " restore
         let words = []
+        " TODO: if  solution not found:
+        "       call add(words, {'word': a:base})
         for i in range(range1, range2)
-            call add(words, {'word': g:vimetable[2*i], 'menu': g:vimetable[2*i+1]})
+            call add(words, {'word': g:vimetable[2*i+1], 'menu': g:vimetable[2*i]})
         endfor
         return {'words': words, 'refresh': 'always'}
     endif
