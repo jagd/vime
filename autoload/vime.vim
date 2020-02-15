@@ -1,9 +1,58 @@
+" TODO: 上屏作为一个 status
 source vime-table.txt
+
+let s:vimetablePunct = {
+    \'.':'。',
+    \',':'，',
+    \'<':'《',
+    \'>':'》',
+    \'^':'…',
+    \'?':'？',
+    \'!':'！',
+    \'(':'（',
+    \')':'）',
+    \'[':'「',
+    \']':'」',
+    \'$':'￥',
+    \';':'；',
+    \':':'：',
+\ }
+
+
 let s:numtable = len(g:vimetable)
 if s:numtable % 2 != 0
     echoerr "Bad vime table"
 endif
-let s:numtable /= 2 " 字词个数
+let s:numtable = s:numtable / 2 " 字词个数
+let b:VimeEnabled = 0
+
+inoremap <silent><F12> <ESC>:call VimeSwitch()<CR>a
+
+function! VimeSwitch()
+    if b:VimeEnabled " Disable
+        for i in range(0, 25)
+            let c = nr2char(97+i)
+            execute ':iunmap <buffer> '.c
+        endfor
+        for i in keys(s:vimetablePunct)
+            execute ':iunmap <buffer> '.i
+        endfor
+        let b:VimeEnabled = 0
+        let &l:completefunc = b:VimeOldCF
+    else " Enable
+        let b:VimeEnabled = 1
+        for i in range(0, 25)
+            let c = nr2char(97+i)
+            execute ':inoremap <buffer> '.c.' '.c.'<C-X><C-U>'
+        endfor
+        for i in keys(s:vimetablePunct)
+            execute ':inoremap <buffer> '.i.' '.s:vimetablePunct[i]
+        endfor
+        execute ':inoremap <buffer> .  。'
+        let b:VimeOldCF = &l:completefunc
+        let &l:completefunc = "VimeComplete"
+    endif
+endfunction
 
 function! VimeComplete(findstart, base)
     if a:findstart
@@ -74,14 +123,12 @@ function! VimeComplete(findstart, base)
             let i -= 1
             let range2 += 1
         endwhile
-        let words = []
+        let words = [a:base]
         " TODO: if  solution not found:
         "       call add(words, {'word': a:base})
         for i in range(range1, range2)
             call add(words, {'word': g:vimetable[2*i+1], 'menu': g:vimetable[2*i]})
         endfor
-        return {'words': words, 'refresh': 'always'}
+        return {'words': words}
     endif
 endfunction
-
-set completefunc=VimeComplete
