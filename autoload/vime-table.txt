@@ -1,4 +1,4 @@
-let g:vimetable = [
+let g:vimeTable = [
 \'a','一',
 \'aai','亍',
 \'ad','于',
