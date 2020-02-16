@@ -1,7 +1,7 @@
 " TODO: 上屏作为一个 status
 source vime-table.txt
 
-let s:vimetablePunct = {
+let s:vimeTablePunct = {
     \'.':'。',
     \',':'，',
     \'<':'《',
@@ -19,36 +19,36 @@ let s:vimetablePunct = {
 \ }
 
 
-let s:numtable = len(g:vimetable)
-if s:numtable % 2 != 0
-    echoerr "Bad vime table"
-endif
-let s:numtable = s:numtable / 2 " 字词个数
-let b:VimeEnabled = 0
+call assert_true(len(g:vimeTable) % 2 == 0)
+call assert_true(len(s:vimeTablePunct) % 2 == 0)
+let b:vimeEnabled = 0
+let b:vimeInBuffer = ""
 
 inoremap <silent><F12> <ESC>:call VimeSwitch()<CR>a
 
 function! VimeSwitch()
-    if b:VimeEnabled " Disable
+    if b:vimeEnabled " to Disable
         for i in range(0, 25)
             let c = nr2char(97+i)
             execute ':iunmap <buffer> '.c
         endfor
-        for i in keys(s:vimetablePunct)
+        for i in keys(s:vimeTablePunct)
             execute ':iunmap <buffer> '.i
         endfor
-        let b:VimeEnabled = 0
+        iunmap <buffer> <BS>
+        let b:vimeEnabled = 0
         let &l:completefunc = b:VimeOldCF
-    else " Enable
-        let b:VimeEnabled = 1
+    else " to Enable
+        let b:vimeEnabled = 1
+        let b:vimeInBuffer = ""
         for i in range(0, 25)
             let c = nr2char(97+i)
-            execute ':inoremap <buffer> '.c.' '.c.'<C-X><C-U>'
+            execute ':inoremap <buffer> '.c." <C-R>=VimeInput('".c."')<CR><C-X><C-U>"
         endfor
-        for i in keys(s:vimetablePunct)
-            execute ':inoremap <buffer> '.i.' '.s:vimetablePunct[i]
+        for i in keys(s:vimeTablePunct)
+            execute ':inoremap <buffer> '.i.' '.s:vimeTablePunct[i]
         endfor
-        execute ':inoremap <buffer> .  。'
+        inoremap <buffer> <BS> <C-R>=VimeBackspace()<CR><C-X><C-U>
         let b:VimeOldCF = &l:completefunc
         let &l:completefunc = "VimeComplete"
     endif
@@ -56,78 +56,92 @@ endfunction
 
 function! VimeComplete(findstart, base)
     if a:findstart
-        " locate the start of the word
-        let line = getline('.')
-        let start = col('.') - 1
-        while start >= 0 && line[start-1] =~ '[#a-z]'
-            let start -= 1
-            if line[start-1] == '#'
-                break
-            endif
-        endwhile
-        return start
+        return col('.') - 1
     else
-        " find matches with "a:base"
-        let codelen = len(a:base)
-        if codelen == 0
-            return []
+        if len(b:vimeInBuffer) == 0
+            return ""
+        else
+            return s:VimeFindCode(g:vimeTable, b:vimeInBuffer)
         endif
-        let bd1 = 0
-        let bd2 = s:numtable - 1
-        call assert_true(bd1 <= bd2)
-        while bd1 < bd2
-            let i = (bd1+bd2) /2
-            let midcode = g:vimetable[i*2] " ind=/2 and ind*2  cancelled
-            if a:base < midcode
-                let bd2 = i - 1
-            elseif a:base > midcode
-                let bd1 = i + 1 
-            else " a:base == midcode
-                let bd1 = i
-                break
+    endif
+endfunction
+
+function! VimeInput(char)
+    let b:vimeInBuffer .= a:char
+    return ""
+endfunction
+
+function! VimeBackspace()
+    let l = len(b:vimeInBuffer)
+    if l > 0
+        let b:vimeInBuffer = strpart(b:vimeInBuffer, 0, l-2)
+        return ""
+    else
+        if col('.') == 1
+            if line('.')  != 1
+                return  "\<ESC>kA\<Del>"
+            else
+                return ""
             endif
-        endwhile
-        " now, either bd1 == bd2 (may or maynot found, the latter case means
-        "                         that there is no exact match, e.g. 'aa')
-        "      or found one of the solutions at bd1
-        let range1 = bd1
-        if strpart(g:vimetable[(range1+1)*2], 0, codelen) == a:base
-            " in case of range1 is not the exact index, e.g 'aa'
-            let range1 += 1
+        else
+            return "\<Left>\<Del>"
         endif
-        while range1 > 0
-            let range1 -= 1
-            " if they are exactly equal, strpart() does not harm
-            " but incase of solution not found, comparing with strpart() will
-            " prompt potential candidates
-            if strpart(g:vimetable[range1*2], 0, codelen) != a:base
-                let range1 += 1 " restore the -1
-                break
-            endif
-        endwhile
+    endif
+endfunction
 
-        let range2 = max([range1, bd1])
-        while range2 < (s:numtable - 1)
-            let range2 += 1
-            if g:vimetable[range2*2] != a:base
-                let range2 -= 1
-                break
-            endif
+function s:VimeFindMatch(table, code)
+    " Parameters: a:table is a list, which is passed by reference
+    " Return: The first index(/2) of the match;  If not found, returns the
+    " index(/2) i, where tablecode[i] < code, where i*2 <= len(a:table)
+    let found = 0
+    let bd1 = 0
+    let bd2 = len(a:code)/2 - 1
+    call assert_true(bd1 <= bd2)
+    while bd1 < bd2
+        let i = (bd1+bd2) /2
+        let midcode = a:table[i*2] " ind=/2 and ind*2  cancelled
+        if a:code< midcode
+            let bd2 = i - 1
+        elseif a:code > midcode
+            let bd1 = i + 1 
+        else " a:code == midcode
+            let bd1 = i
+            let found = 1
+            break
+        endif
+    endwhile
+    if found
+        while (bd1 > 0) && (a:table[bd1*2] == a:code)
+            let bd1 -= 1
         endwhile
+    elseif a:table[bd1*2] < a:code
+            let bd1 += 1
+    endif
+    return bd1
+endfunction
 
-        " Now range1 and range2 are exact matches
-        " Now find the prompts, must include the check of range2 again
-        let i = 1000 " max additional prompt count
-        while i >= 0 && range2 < (s:numtable - 1)
-                    \ && strpart(g:vimetable[(range2+1)*2], 0, codelen) == a:base
-            let i -= 1
-            let range2 += 1
+function s:VimeFindCode(table, code)
+        let start = s:VimeFindMatch(a:table, a:code)
+        let end = start
+        let tablelen = len(a:table)/2
+        let codelen = len(a:code)
+        " find the exact matches
+        while (end < tablelen) && (a:table[end*2] == a:code)
+            let end += 1
         endwhile
-        let words = [a:base]
-        " TODO: if  solution not found:
-        "       call add(words, {'word': a:base})
-        for i in range(range1, range2)
-            call add(words, {'word': g:vimetable[2*i+1], 'menu': g:vimetable[2*i]})
+        let numAdditionalPrompt = 10
+        while numAdditionalPrompt  > 0
+            \ && (end < tablelen)
+            \ && strpart(a:table[end*2], 0, codelen) == a:code
+            let end += 1
+            let numAdditionalPrompt -= 1
+        endwhile
+        if end >= tablelen
+            let end -= tablelen - 1
+        endif
+        let words = [{'word': a:code}]
+        for i in range(start, end)
+            call add(words, {'word': a:table[2*i+1], 'menu': a:table[2*i]})
         endfor
         return {'words': words}
     endif
