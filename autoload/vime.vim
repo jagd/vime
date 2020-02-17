@@ -70,6 +70,8 @@ function! VimeSwitch()
             execute ':inoremap <buffer> '.i.' '.s:vimeTablePunct[i]
         endfor
         inoremap <buffer> <SPACE> <C-R>=VimeSpace()<CR><C-X><C-U>
+        " Do not bind <CR> since it could be alread used for smart-enter in
+        " order to complete \begin{env} \end{env} or braces in TeX / C.
         let b:VimeOldCF = &l:completefunc
         let &l:completefunc = "VimeComplete"
     endif
