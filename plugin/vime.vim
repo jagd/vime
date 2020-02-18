@@ -1,13 +1,22 @@
+" VIME: input method for vim
+" Usage:
+"    put in vimrc:
+"    inoremap <silent><F12> <C-R>=VimeSwitch()<CR>
+"
 " TODO: “”‘’
-" TODO: 根据词频排序：https://raw.githubusercontent.com/hevz/ibus-table-zhengma/master/zhengma.txt
+" TODO: Pinyin reverse search
 
-inoremap <silent><F12> <ESC>:call VimeSwitch()<CR>a
+if exists('g:autoload_vime')
+  finish
+endif
+let g:autoload_vime = 1
 
-let b:vimeEnabled = 0
-let b:vimeDoCommit = 0
+
+let b:vimeIsEnabled = 0
+let b:vimeShouldCommit = 0
 
 function s:VimeLoadTable()
-    source vime-table.txt
+    runtime vime-table.txt
     let s:vimeTablePunct = {
         \'0':'０',
         \'1':'１',
@@ -47,7 +56,7 @@ endfunction
 
 function! VimeSwitch()
     let b:vimeDefaultOutput = ''
-    if b:vimeEnabled " to Disable
+    if b:vimeIsEnabled " to Disable
         for i in range(0, 25)
             let c = nr2char(97+i)
             execute ':iunmap <buffer> '.c
@@ -56,13 +65,13 @@ function! VimeSwitch()
             execute ':iunmap <buffer> '.i
         endfor
         execute ':iunmap <buffer> <SPACE>'
-        let b:vimeEnabled = 0
+        let b:vimeIsEnabled = 0
         let &l:completefunc = b:VimeOldCF
     else " to Enable
         if ! exists("g:vimeTable")
             call s:VimeLoadTable()
         endif
-        let b:vimeEnabled = 1
+        let b:vimeIsEnabled = 1
         for i in range(0, 25)
             let c = nr2char(97+i)
             execute ':inoremap <buffer> '.c.' '.c.'<C-X><C-U>'
@@ -76,11 +85,12 @@ function! VimeSwitch()
         let b:VimeOldCF = &l:completefunc
         let &l:completefunc = "VimeComplete"
     endif
+    return ''
 endfunction
 
 function! VimeSpace()
     if len(b:vimeDefaultOutput)
-        let b:vimeDoCommit = 1
+        let b:vimeShouldCommit = 1
         return ''
     endif
     return '　'
@@ -102,10 +112,10 @@ function! VimeComplete(findstart, base)
         if len(a:base) == 0
             return []
         endif
-        if b:vimeDoCommit
+        if b:vimeShouldCommit
             let sym = b:vimeDefaultOutput
             let b:vimeDefaultOutput = ''
-            let b:vimeDoCommit = 0
+            let b:vimeShouldCommit = 0
             return [sym]
         else
             return s:VimeFindCode(g:vimeTable, a:base)
