@@ -65,6 +65,7 @@ function! VimeSwitch()
             execute ':iunmap <buffer> '.i
         endfor
         execute ':iunmap <buffer> <SPACE>'
+        execute ':iunmap <buffer> <BS>'
         let b:vimeIsEnabled = 0
         let &l:completefunc = b:VimeOldCF
     else " to Enable
@@ -80,6 +81,7 @@ function! VimeSwitch()
             execute ':inoremap <silent><buffer> '.i.' '.s:vimeTablePunct[i]
         endfor
         inoremap <silent><buffer> <SPACE> <C-R>=VimeSpace()<CR><C-X><C-U>
+        inoremap <silent><buffer> <BS> <BS><C-X><C-U>
         " Do not bind <CR> since it could be alread used for smart-enter in
         " order to complete \begin{env} \end{env} or braces in TeX / C.
         let b:VimeOldCF = &l:completefunc
@@ -190,6 +192,7 @@ function! s:VimeFindCode(table, code)
         for i in range(start, end)
             call add(words, {'word': a:table[2*i+1], 'menu': a:table[2*i]})
         endfor
+        " refresh always cannot handle <BS>, therefore use a inoremap
         return {'words': words}
     endif
 endfunction
