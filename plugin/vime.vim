@@ -74,12 +74,12 @@ function! VimeSwitch()
         let b:vimeIsEnabled = 1
         for i in range(0, 25)
             let c = nr2char(97+i)
-            execute ':inoremap <buffer> '.c.' '.c.'<C-X><C-U>'
+            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-X><C-U>'
         endfor
         for i in keys(s:vimeTablePunct)
-            execute ':inoremap <buffer> '.i.' '.s:vimeTablePunct[i]
+            execute ':inoremap <silent><buffer> '.i.' '.s:vimeTablePunct[i]
         endfor
-        inoremap <buffer> <SPACE> <C-R>=VimeSpace()<CR><C-X><C-U>
+        inoremap <silent><buffer> <SPACE> <C-R>=VimeSpace()<CR><C-X><C-U>
         " Do not bind <CR> since it could be alread used for smart-enter in
         " order to complete \begin{env} \end{env} or braces in TeX / C.
         let b:VimeOldCF = &l:completefunc
@@ -89,6 +89,7 @@ function! VimeSwitch()
 endfunction
 
 function! VimeSpace()
+    call VimeComplete(1, '')
     if len(b:vimeDefaultOutput)
         let b:vimeShouldCommit = 1
         return ''
@@ -100,13 +101,18 @@ function! VimeComplete(findstart, base)
     if a:findstart
         " locate the start of the word
         let line = getline('.')
-        let start = col('.') - 1
+        let verystart = col('.') - 1
+        let start = verystart
         while start >= 0 && line[start-1] =~ '[#a-z]'
             let start -= 1
             if line[start-1] == '#'
                 break
             endif
         endwhile
+        if start == verystart
+            let b:vimeDefaultOutput=''
+            return -3
+        endif
         return start
     else
         if len(a:base) == 0
