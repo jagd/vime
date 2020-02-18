@@ -1,4 +1,5 @@
 " TODO: “”‘’
+" TODO: 根据词频排序：https://raw.githubusercontent.com/hevz/ibus-table-zhengma/master/zhengma.txt
 
 inoremap <silent><F12> <ESC>:call VimeSwitch()<CR>a
 
