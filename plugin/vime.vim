@@ -1,21 +1,55 @@
 " VIME: input method for vim
 " Usage:
-"    put in vimrc:
-"    inoremap <silent><F12> <C-R>=VimeSwitch()<CR>
+"    Put in vimrc:
+"       inoremap <silent><F12> <C-R>=VimeSwitch()<CR>
+"       nnoremap <silent><F12> :call VimeInverseLookup()<CR>
 "
 " TODO: “”‘’
-" TODO: Pinyin reverse search
+" TODO: Pinyin
 
 if exists('g:autoload_vime')
   finish
 endif
 let g:autoload_vime = 1
 
-
 let b:vimeIsEnabled = 0
 let b:vimeShouldCommit = 0
 
-function s:VimeLoadTable()
+function! VimeInverseLookup()
+    call s:VimeLoadTable()
+    call s:VimeMakeInverseTable()
+    let s = strcharpart(getline('.')[col('.') - 1:], 0, 1)
+    if len(s) == 0
+        return
+    elseif exists('s:inverseTable["'.s.'"]')
+        echo s.': ' s:inverseTable[s]
+    else
+        echo "No result ound"
+    endif
+
+endfunction
+
+function! s:VimeMakeInverseTable()
+    if exists("s:inverseTable")
+        return
+    endif
+    let s:inverseTable = {}
+    let tablelen = len(g:vimeTable)/2
+    for i in range(tablelen)
+        let c = g:vimeTable[i*2]
+        let s = g:vimeTable[i*2+1]
+        if exists('s:inverseTable["'.s.'"]')
+            let s:inverseTable[s] = s:inverseTable[s] .' | '. c
+        else
+            let s:inverseTable[s] =  c
+        endif
+    endfor
+endfunction
+
+function! s:VimeLoadTable()
+    if exists("g:vimeTable")
+        return
+    endif
     runtime vime-table.txt
     let s:vimeTablePunct = {
         \'0':'０',
@@ -69,9 +103,7 @@ function! VimeSwitch()
         let b:vimeIsEnabled = 0
         let &l:completefunc = b:VimeOldCF
     else " to Enable
-        if ! exists("g:vimeTable")
-            call s:VimeLoadTable()
-        endif
+        call s:VimeLoadTable()
         let b:vimeIsEnabled = 1
         for i in range(0, 25)
             let c = nr2char(97+i)
@@ -138,7 +170,7 @@ function! s:VimeFindMatch(table, code)
     let b:vimeDefaultOutput = ''
     let found = 0
     let codelen = len(a:code)
-    let tablelen = len(a:table)/2 
+    let tablelen = len(a:table)/2
     let bd1 = 0
     let bd2 = tablelen - 1
     call assert_true(bd1 <= bd2)
