@@ -4,7 +4,6 @@
 "       inoremap <silent><F12> <C-R>=VimeSwitch()<CR>
 "       nnoremap <silent><F12> :call VimeInverseLookup()<CR>
 "
-" TODO: “”‘’
 " TODO: Pinyin
 
 if exists('g:autoload_vime')
@@ -14,6 +13,8 @@ let g:autoload_vime = 1
 
 let b:vimeIsEnabled = 0
 let b:vimeShouldCommit = 0
+let b:vimeOpenedQuote = 0
+let b:vimeOpenedDoubleQuote = 0
 
 function! VimeInverseLookup()
     call s:VimeLoadTable()
@@ -38,8 +39,10 @@ function! VimeSwitch()
         for i in keys(s:vimeTablePunct)
             execute ':iunmap <buffer> '.i
         endfor
-        execute ':iunmap <buffer> <SPACE>'
-        execute ':iunmap <buffer> <BS>'
+        iunmap <buffer> <SPACE>
+        iunmap <buffer> <BS>
+        iunmap <buffer> '
+        iunmap <buffer> "
         let b:vimeIsEnabled = 0
         let &l:completefunc = b:VimeOldCF
     else " to Enable
@@ -54,12 +57,32 @@ function! VimeSwitch()
         endfor
         inoremap <silent><buffer> <SPACE> <C-R>=VimeSpace()<CR><C-X><C-U>
         inoremap <silent><buffer> <BS> <BS><C-X><C-U>
+        inoremap <silent><buffer> ' <C-R>=VimeQuote()<CR>
+        inoremap <silent><buffer> " <C-R>=VimeDoubleQuote()<CR>
         " Do not bind <CR> since it could be alread used for smart-enter in
         " order to complete \begin{env} \end{env} or braces in TeX / C.
         let b:VimeOldCF = &l:completefunc
         let &l:completefunc = "VimeComplete"
     endif
     return ''
+endfunction
+
+function! VimeQuote()
+    let b:vimeOpenedQuote = !b:vimeOpenedQuote
+    if b:vimeOpenedQuote
+        return '‘'
+    else
+        return '’'
+    endif
+endfunction
+
+function! VimeDoubleQuote()
+    let b:vimeOpenedDoubleQuote = !b:vimeOpenedDoubleQuote
+    if b:vimeOpenedDoubleQuote
+        return '“'
+    else
+        return '”'
+    endif
 endfunction
 
 function! VimeSpace()
