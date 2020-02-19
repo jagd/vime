@@ -6,15 +6,10 @@
 "
 " TODO: Pinyin
 
-if exists('g:autoload_vime')
+if exists('g:vime_loaded')
   finish
 endif
 let g:autoload_vime = 1
-
-let b:vimeIsEnabled = 0
-let b:vimeShouldCommit = 0
-let b:vimeOpenedQuote = 0
-let b:vimeOpenedDoubleQuote = 0
 
 function! VimeInverseLookup()
     call s:VimeLoadTable()
@@ -30,6 +25,9 @@ function! VimeInverseLookup()
 endfunction
 
 function! VimeSwitch()
+    if ! exists('b:vimeIsEnabled')
+        call s:VimeBufferInit()
+    endif
     let b:vimeDefaultOutput = ''
     if b:vimeIsEnabled " to Disable
         for i in range(0, 25)
@@ -121,7 +119,7 @@ function! VimeComplete(findstart, base)
             let b:vimeShouldCommit = 0
             return [sym]
         else
-            return s:VimeFindCode(g:vimeTable, a:base)
+            return s:VimeFindCode(s:vimeTable, a:base)
         endif
     endif
 endfunction
@@ -159,10 +157,10 @@ function! s:VimeMakeInverseTable()
         return
     endif
     let s:inverseTable = {}
-    let tablelen = len(g:vimeTable)/2
+    let tablelen = len(s:vimeTable)/2
     for i in range(tablelen)
-        let c = g:vimeTable[i*2]
-        let s = g:vimeTable[i*2+1]
+        let c = s:vimeTable[i*2]
+        let s = s:vimeTable[i*2+1]
         if exists('s:inverseTable["'.s.'"]')
             let s:inverseTable[s] = s:inverseTable[s] .' | '. c
         else
@@ -172,10 +170,12 @@ function! s:VimeMakeInverseTable()
 endfunction
 
 function! s:VimeLoadTable()
-    if exists("g:vimeTable")
+    if exists("s:vimeTable")
         return
     endif
     runtime vime-table.txt
+    let s:vimeTable = g:vimeTable
+    unlet g:vimeTable
     let s:vimeTablePunct = {
         \'0':'０',
         \'1':'１',
@@ -209,7 +209,7 @@ function! s:VimeLoadTable()
         \']':'」',
         \'^':'…',
     \ }
-    call assert_true(len(g:vimeTable) % 2 == 0)
+    call assert_true(len(s:vimeTable) % 2 == 0)
     call assert_true(len(s:vimeTablePunct) % 2 == 0)
 endfunction
 
@@ -249,4 +249,11 @@ function! s:VimeFindMatch(table, code)
         endif
     endif
     return bd1
+endfunction
+
+function s:VimeBufferInit()
+    let b:vimeIsEnabled = 0
+    let b:vimeShouldCommit = 0
+    let b:vimeOpenedQuote = 0
+    let b:vimeOpenedDoubleQuote = 0
 endfunction
