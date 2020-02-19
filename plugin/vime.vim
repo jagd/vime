@@ -1,10 +1,12 @@
-" VIME: input method for vim
+" VIME: Input Method for Vim
+"
 " Usage:
-"    Put in vimrc:
+"
+"    Put in vimrc the following maps, here <F12> is taken for example
+"
 "       inoremap <silent><F12> <C-R>=VimeSwitch()<CR>
 "       nnoremap <silent><F12> :call VimeInverseLookup()<CR>
 "
-" TODO: Pinyin
 
 if exists('g:vime_loaded')
   finish
