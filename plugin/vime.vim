@@ -24,68 +24,8 @@ function! VimeInverseLookup()
     elseif exists('s:inverseTable["'.s.'"]')
         echo s.': ' s:inverseTable[s]
     else
-        echo "No result ound"
+        echo "No result found"
     endif
-
-endfunction
-
-function! s:VimeMakeInverseTable()
-    if exists("s:inverseTable")
-        return
-    endif
-    let s:inverseTable = {}
-    let tablelen = len(g:vimeTable)/2
-    for i in range(tablelen)
-        let c = g:vimeTable[i*2]
-        let s = g:vimeTable[i*2+1]
-        if exists('s:inverseTable["'.s.'"]')
-            let s:inverseTable[s] = s:inverseTable[s] .' | '. c
-        else
-            let s:inverseTable[s] =  c
-        endif
-    endfor
-endfunction
-
-function! s:VimeLoadTable()
-    if exists("g:vimeTable")
-        return
-    endif
-    runtime vime-table.txt
-    let s:vimeTablePunct = {
-        \'0':'０',
-        \'1':'１',
-        \'2':'２',
-        \'3':'３',
-        \'4':'４',
-        \'5':'５',
-        \'6':'６',
-        \'7':'７',
-        \'8':'８',
-        \'9':'９',
-        \'!':'！',
-        \'$':'￥',
-        \'%':'％',
-        \'&':'＆',
-        \'(':'（',
-        \')':'）',
-        \'*':'× ',
-        \'+':'＋',
-        \',':'，',
-        \'-':'－',
-        \'.':'。',
-        \'/':'÷ ',
-        \':':'：',
-        \';':'；',
-        \'=':'＝',
-        \'<':'《',
-        \'>':'》',
-        \'?':'？',
-        \'[':'「',
-        \']':'」',
-        \'^':'…',
-    \ }
-    call assert_true(len(g:vimeTable) % 2 == 0)
-    call assert_true(len(s:vimeTablePunct) % 2 == 0)
 endfunction
 
 function! VimeSwitch()
@@ -163,6 +103,93 @@ function! VimeComplete(findstart, base)
     endif
 endfunction
 
+function! s:VimeFindCode(table, code)
+        let start = s:VimeFindMatch(a:table, a:code)
+        let end = start
+        let tablelen = len(a:table)/2
+        let codelen = len(a:code)
+        " find the exact matches
+        while (end < tablelen) && (a:table[end*2] == a:code)
+            let end += 1
+        endwhile
+        let numAdditionalPrompt = 10
+        while numAdditionalPrompt  > 0
+            \ && (end < tablelen)
+            \ && strpart(a:table[end*2], 0, codelen) == a:code
+            let end += 1
+            let numAdditionalPrompt -= 1
+        endwhile
+        if end >= tablelen
+            let end = tablelen - 1
+        endif
+        let words = [{'word': a:code}]
+        for i in range(start, end)
+            call add(words, {'word': a:table[2*i+1], 'menu': a:table[2*i]})
+        endfor
+        " refresh always cannot handle <BS>, therefore use a inoremap
+        return {'words': words}
+    endif
+endfunction
+
+function! s:VimeMakeInverseTable()
+    if exists("s:inverseTable")
+        return
+    endif
+    let s:inverseTable = {}
+    let tablelen = len(g:vimeTable)/2
+    for i in range(tablelen)
+        let c = g:vimeTable[i*2]
+        let s = g:vimeTable[i*2+1]
+        if exists('s:inverseTable["'.s.'"]')
+            let s:inverseTable[s] = s:inverseTable[s] .' | '. c
+        else
+            let s:inverseTable[s] =  c
+        endif
+    endfor
+endfunction
+
+function! s:VimeLoadTable()
+    if exists("g:vimeTable")
+        return
+    endif
+    runtime vime-table.txt
+    let s:vimeTablePunct = {
+        \'0':'０',
+        \'1':'１',
+        \'2':'２',
+        \'3':'３',
+        \'4':'４',
+        \'5':'５',
+        \'6':'６',
+        \'7':'７',
+        \'8':'８',
+        \'9':'９',
+        \'!':'！',
+        \'$':'￥',
+        \'%':'％',
+        \'&':'＆',
+        \'(':'（',
+        \')':'）',
+        \'*':'× ',
+        \'+':'＋',
+        \',':'，',
+        \'-':'－',
+        \'.':'。',
+        \'/':'÷ ',
+        \':':'：',
+        \';':'；',
+        \'=':'＝',
+        \'<':'《',
+        \'>':'》',
+        \'?':'？',
+        \'[':'「',
+        \']':'」',
+        \'^':'…',
+    \ }
+    call assert_true(len(g:vimeTable) % 2 == 0)
+    call assert_true(len(s:vimeTablePunct) % 2 == 0)
+endfunction
+
 function! s:VimeFindMatch(table, code)
     " Parameters: a:table is a list, which is passed by reference
     " Return: The first index(/2) of the match;  If not found, returns the
@@ -199,32 +226,4 @@ function! s:VimeFindMatch(table, code)
         endif
     endif
     return bd1
-endfunction
-
-function! s:VimeFindCode(table, code)
-        let start = s:VimeFindMatch(a:table, a:code)
-        let end = start
-        let tablelen = len(a:table)/2
-        let codelen = len(a:code)
-        " find the exact matches
-        while (end < tablelen) && (a:table[end*2] == a:code)
-            let end += 1
-        endwhile
-        let numAdditionalPrompt = 10
-        while numAdditionalPrompt  > 0
-            \ && (end < tablelen)
-            \ && strpart(a:table[end*2], 0, codelen) == a:code
-            let end += 1
-            let numAdditionalPrompt -= 1
-        endwhile
-        if end >= tablelen
-            let end = tablelen - 1
-        endif
-        let words = [{'word': a:code}]
-        for i in range(start, end)
-            call add(words, {'word': a:table[2*i+1], 'menu': a:table[2*i]})
-        endfor
-        " refresh always cannot handle <BS>, therefore use a inoremap
-        return {'words': words}
-    endif
 endfunction
