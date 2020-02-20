@@ -6,6 +6,7 @@
 "       nnoremap <silent><F12> :call VimeInverseLookup()<CR>
 "
 " Feature:
+"   - High performance
 "   - Pinyin prefix: #
 "   - Tables are loaded lazily at the first time when it is needed
 "
@@ -134,7 +135,7 @@ function! s:VimeFindCode(table, code, prefix='')
             return {}
         endif
         let start = s:VimeFindMatch(a:table, a:code)
-        let end = start
+        let end = start  " end is an open interval boundary i.e., [start, end)
         let tablelen = len(a:table)/2
         " find the exact matches
         while (end < tablelen) && (a:table[end*2] == a:code)
@@ -147,11 +148,8 @@ function! s:VimeFindCode(table, code, prefix='')
             let end += 1
             let numAdditionalPrompt -= 1
         endwhile
-        if end >= tablelen
-            let end = tablelen - 1
-        endif
         let words = [{'word': a:prefix.a:code}]
-        for i in range(start, end)
+        for i in range(start, end-1)
             call add(words, {'word': a:table[2*i+1], 'menu': a:prefix.a:table[2*i]})
         endfor
         " refresh always cannot handle <BS>, therefore use a inoremap
