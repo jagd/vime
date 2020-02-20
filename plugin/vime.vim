@@ -124,12 +124,13 @@ function! VimeComplete(findstart, base)
             call s:VimeLoadPinyinTable()
             return s:VimeFindCode(s:vimePinyinTable, a:base[1:], a:base[0])
         else
-            return s:VimeFindCode(s:vimeTable, a:base)
+            return s:VimeFindCode(s:vimeTable, a:base, '')
         endif
     endif
 endfunction
 
-function! s:VimeFindCode(table, code, prefix='')
+function! s:VimeFindCode(table, code, prefix)
+        " default param like prefix='' is supported since vim8.2
         let codelen = len(a:code)
         if codelen == 0
             return {}
