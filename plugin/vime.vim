@@ -1,11 +1,13 @@
 " VIME: Input Method for Vim
 "
 " Usage:
-"
 "    Put in vimrc the following maps, here <F12> is taken for example
-"
 "       inoremap <silent><F12> <C-R>=VimeSwitch()<CR>
 "       nnoremap <silent><F12> :call VimeInverseLookup()<CR>
+"
+" Feature:
+"   - Pinyin prefix: #
+"   - Tables are loaded lazily at the first time when it is needed
 "
 
 if exists('g:vime_loaded')
@@ -102,9 +104,6 @@ function! VimeComplete(findstart, base)
         let start = verystart
         while start >= 0 && line[start-1] =~ '[#a-z]'
             let start -= 1
-            if line[start-1] == '#'
-                break
-            endif
         endwhile
         if start == verystart
             let b:vimeDefaultOutput=''
@@ -120,17 +119,23 @@ function! VimeComplete(findstart, base)
             let b:vimeDefaultOutput = ''
             let b:vimeShouldCommit = 0
             return [sym]
+        elseif a:base[0] == '#'
+            call s:VimeLoadPinyinTable()
+            return s:VimeFindCode(s:vimePinyinTable, a:base[1:], a:base[0])
         else
             return s:VimeFindCode(s:vimeTable, a:base)
         endif
     endif
 endfunction
 
-function! s:VimeFindCode(table, code)
+function! s:VimeFindCode(table, code, prefix='')
+        let codelen = len(a:code)
+        if codelen == 0
+            return {}
+        endif
         let start = s:VimeFindMatch(a:table, a:code)
         let end = start
         let tablelen = len(a:table)/2
-        let codelen = len(a:code)
         " find the exact matches
         while (end < tablelen) && (a:table[end*2] == a:code)
             let end += 1
@@ -145,9 +150,9 @@ function! s:VimeFindCode(table, code)
         if end >= tablelen
             let end = tablelen - 1
         endif
-        let words = [{'word': a:code}]
+        let words = [{'word': a:prefix.a:code}]
         for i in range(start, end)
-            call add(words, {'word': a:table[2*i+1], 'menu': a:table[2*i]})
+            call add(words, {'word': a:table[2*i+1], 'menu': a:prefix.a:table[2*i]})
         endfor
         " refresh always cannot handle <BS>, therefore use a inoremap
         return {'words': words}
@@ -169,6 +174,14 @@ function! s:VimeMakeInverseTable()
             let s:inverseTable[s] =  c
         endif
     endfor
+endfunction
+
+function! s:VimeLoadPinyinTable()
+    if exists("s:vimePinyinTable")
+        return
+    endif
+    runtime vime-table-pinyin.txt
+    let s:vimePinyinTable = g:vimeTable
 endfunction
 
 function! s:VimeLoadTable()
