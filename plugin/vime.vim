@@ -9,6 +9,9 @@
 "    `let g:vimeDefaultFullPunct = 1` to enable full punctuation by default.
 "         b:vimeFullPunct, if exists, will override g:vimeDefaultFullPunct
 "
+"    Full punctuation conflicts with LaTeX. When full punct is enabled, LaTeX
+"    will be automatically disabled.
+"
 " Feature:
 "   - High performance
 "   - Pinyin prefix: #
@@ -196,7 +199,7 @@ function! VimeComplete(findstart, base)
         elseif a:base[0] == '#'
             call s:VimeLoadPinyinTable()
             return s:VimeFindCode(s:vimePinyinTable, a:base[1:], a:base[0])
-        elseif a:base[0] == '\'
+        elseif (a:base[0] == '\') && (!b:vimeFullPunctIsMapped)
             call s:VimeLoadLaTeXTable()
             return s:VimeFindCode(s:vimeLaTeXTable, a:base[1:], a:base[0])
         else
