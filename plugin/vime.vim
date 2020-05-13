@@ -97,20 +97,52 @@ function! VimeSpace()
     return '　'
 endfunction
 
+function! s:VimeMatchLaTeXStart()
+    let line = getline('.')
+    let verystart = col('.') - 1
+    let start = verystart
+    while start >= 0 && line[start-1] =~ "[-=a-zA-Z0-9+'`_^()]"
+        let start -= 1
+    endwhile
+    if (start >= 0) && (line[start-1] == '\')
+        " Pinyin
+        return start-1
+    else
+        return -3
+    endif
+endfunction
+
+function! s:VimeMatchChineseStart()
+    let line = getline('.')
+    let verystart = col('.') - 1
+    let start = verystart
+    while start >= 0 && line[start-1] =~ '[a-z]'
+        let start -= 1
+    endwhile
+    if (start >= 0) && (line[start-1] == '#')
+        " Pinyin
+        let start -= 1
+    endif
+    if start == verystart
+        return -3
+    endif
+    return start
+endfunction
+
 function! VimeComplete(findstart, base)
     if a:findstart
         " locate the start of the word
-        let line = getline('.')
-        let verystart = col('.') - 1
-        let start = verystart
-        while start >= 0 && line[start-1] =~ '[#a-z]'
-            let start -= 1
-        endwhile
-        if start == verystart
-            let b:vimeDefaultOutput=''
-            return -3
+        let start = s:VimeMatchLaTeXStart()
+        if start >= 0
+            return start
         endif
-        return start
+        let start = s:VimeMatchChineseStart()
+        if start >= 0
+            return start
+        endif
+        " otherwise: mismatched
+        let b:vimeDefaultOutput=''
+        return -3
     else
         if len(a:base) == 0
             return []
@@ -123,6 +155,9 @@ function! VimeComplete(findstart, base)
         elseif a:base[0] == '#'
             call s:VimeLoadPinyinTable()
             return s:VimeFindCode(s:vimePinyinTable, a:base[1:], a:base[0])
+        elseif a:base[0] == '\'
+            call s:VimeLoadLaTeXTable()
+            return s:VimeFindCode(s:vimeLaTeXTable, a:base[1:], a:base[0])
         else
             return s:VimeFindCode(s:vimeTable, a:base, '')
         endif
@@ -181,6 +216,14 @@ function! s:VimeLoadPinyinTable()
     endif
     runtime vime-table-pinyin.txt
     let s:vimePinyinTable = g:vimeTable
+endfunction
+
+function! s:VimeLoadLaTeXTable()
+    if exists("s:vimeLaTeXTable")
+        return
+    endif
+    runtime vime-table-latex.txt
+    let s:vimeLaTeXTable = g:vimeTable
 endfunction
 
 function! s:VimeLoadTable()
