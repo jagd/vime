@@ -6,8 +6,8 @@
 "       inoremap <silent><F12>. <ESC>:call VimeToggleFullPunct()<CR>
 "       nnoremap <silent><F12> :call VimeInverseLookup()<CR>
 "
-"    `let g:vimeFullPunct = 0` to disable default full punctuation
-"         b:vimeFullPunct, if exists, will override g:vimeFullPunct
+"    `let g:vimeDefaultFullPunct = 1` to enable full punctuation by default.
+"         b:vimeFullPunct, if exists, will override g:vimeDefaultFullPunct
 "
 " Feature:
 "   - High performance
@@ -16,19 +16,25 @@
 "
 
 if exists('g:vime_loaded')
-  finish
+    finish
 endif
-
 let g:autoload_vime = 1
+let g:vime_loaded = 1
 
-if !exists("g:vimeFullPunct")
-    let g:vimeFullPunct = 1
+if !exists("g:vimeDefaultFullPunct")
+    let g:vimeDefaultFullPunct = 0
 endif
+
+function! s:VimeBufferInit() abort
+    let b:vimeIsEnabled = 0
+    let b:vimeShouldCommit = 0
+    let b:vimeOpenedQuote = 0
+    let b:vimeOpenedDoubleQuote = 0
+    let b:vimeFullPunct = g:vimeDefaultFullPunct
+    let b:vimeFullPunctIsMapped = 0
+endfunction
 
 function! VimeToggleFullPunct()
-    if !exists("b:vimeFullPunct")
-        let b:vimeFullPunct = g:vimeFullPunct
-    endif
     let b:vimeFullPunct = !b:vimeFullPunct
     call s:VimeMapPuntuation(b:vimeFullPunct)
     return ''
@@ -55,15 +61,15 @@ function! s:VimeMapPuntuation(shouldMap) abort
         inoremap <silent><buffer> <BS> <BS><C-X><C-U>
         inoremap <silent><buffer> ' <C-R>=VimeQuote()<CR>
         inoremap <silent><buffer> " <C-R>=VimeDoubleQuote()<CR>
-        let b:vimePunctMapped = 1
-    elseif exists("b:vimePunctMapped") && b:vimePunctMapped
+        let b:vimeFullPunctIsMapped = 1
+    elseif b:vimeFullPunctIsMapped
         for i in keys(s:vimeTablePunct)
             execute ':iunmap <buffer> '.i
         endfor
         iunmap <buffer> <BS>
         iunmap <buffer> '
         iunmap <buffer> "
-        let b:vimePunctMapped = 0
+        let b:vimeFullPunctIsMapped = 0
     endif
 endfunction
 
@@ -89,14 +95,8 @@ function! VimeSwitch()
         endfor
         inoremap <silent><buffer> <SPACE> <C-R>=VimeSpace()<CR><C-X><C-U>
         let b:vimeIsEnabled = 1
-        if exists("b:vimeFullPunct")
-            if b:vimeFullPunct
-                call s:VimeMapPuntuation(1)
-            endif
-        else
-            if g:vimeFullPunct
-                call s:VimeMapPuntuation(1)
-            endif
+        if b:vimeFullPunct
+            call s:VimeMapPuntuation(1)
         endif
         " Do not bind <CR> since it could be alread used for smart-enter in
         " order to complete \begin{env} \end{env} or braces in TeX / C.
@@ -130,7 +130,7 @@ function! VimeSpace()
         let b:vimeShouldCommit = 1
         return ''
     endif
-    if exists("b:vimePunctMapped") && b:vimePunctMapped
+    if b:vimeFullPunctIsMapped
         return '　'
     else
         return ' '
@@ -347,11 +347,4 @@ function! s:VimeFindMatch(table, code)
         endif
     endif
     return bd1
-endfunction
-
-function s:VimeBufferInit()
-    let b:vimeIsEnabled = 0
-    let b:vimeShouldCommit = 0
-    let b:vimeOpenedQuote = 0
-    let b:vimeOpenedDoubleQuote = 0
 endfunction
