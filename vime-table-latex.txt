@@ -228,6 +228,7 @@ let g:vimeTable = [
 \'fallingdotseq','≒',
 \'flat','♭',
 \'forall','∀',
+\'frac','⁄',
 \'frac1','⅟',
 \'frac12','½',
 \'frac13','⅓',
