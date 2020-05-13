@@ -3,7 +3,11 @@
 " Usage:
 "    Put in vimrc the following maps, here <F12> is taken for example
 "       inoremap <silent><F12> <C-R>=VimeSwitch()<CR>
+"       inoremap <silent><F12>. <ESC>:call VimeToggleFullPunct()<CR>
 "       nnoremap <silent><F12> :call VimeInverseLookup()<CR>
+"
+"    `let g:vimeFullPunct = 0` to disable default full punctuation
+"         b:vimeFullPunct, if exists, will override g:vimeFullPunct
 "
 " Feature:
 "   - High performance
@@ -14,7 +18,21 @@
 if exists('g:vime_loaded')
   finish
 endif
+
 let g:autoload_vime = 1
+
+if !exists("g:vimeFullPunct")
+    let g:vimeFullPunct = 1
+endif
+
+function! VimeToggleFullPunct()
+    if !exists("b:vimeFullPunct")
+        let b:vimeFullPunct = g:vimeFullPunct
+    endif
+    let b:vimeFullPunct = !b:vimeFullPunct
+    call s:VimeMapPuntuation(b:vimeFullPunct)
+    return ''
+endfunction
 
 function! VimeInverseLookup()
     call s:VimeLoadTable()
@@ -29,6 +47,26 @@ function! VimeInverseLookup()
     endif
 endfunction
 
+function! s:VimeMapPuntuation(shouldMap) abort
+    if a:shouldMap
+        for i in keys(s:vimeTablePunct)
+            execute ':inoremap <silent><buffer> '.i.' '.s:vimeTablePunct[i]
+        endfor
+        inoremap <silent><buffer> <BS> <BS><C-X><C-U>
+        inoremap <silent><buffer> ' <C-R>=VimeQuote()<CR>
+        inoremap <silent><buffer> " <C-R>=VimeDoubleQuote()<CR>
+        let b:vimePunctMapped = 1
+    elseif exists("b:vimePunctMapped") && b:vimePunctMapped
+        for i in keys(s:vimeTablePunct)
+            execute ':iunmap <buffer> '.i
+        endfor
+        iunmap <buffer> <BS>
+        iunmap <buffer> '
+        iunmap <buffer> "
+        let b:vimePunctMapped = 0
+    endif
+endfunction
+
 function! VimeSwitch()
     if ! exists('b:vimeIsEnabled')
         call s:VimeBufferInit()
@@ -39,29 +77,27 @@ function! VimeSwitch()
             let c = nr2char(97+i)
             execute ':iunmap <buffer> '.c
         endfor
-        for i in keys(s:vimeTablePunct)
-            execute ':iunmap <buffer> '.i
-        endfor
         iunmap <buffer> <SPACE>
-        iunmap <buffer> <BS>
-        iunmap <buffer> '
-        iunmap <buffer> "
         let b:vimeIsEnabled = 0
+        call s:VimeMapPuntuation(0)
         let &l:completefunc = b:VimeOldCF
     else " to Enable
         call s:VimeLoadTable()
-        let b:vimeIsEnabled = 1
         for i in range(0, 25)
             let c = nr2char(97+i)
             execute ':inoremap <silent><buffer> '.c.' '.c.'<C-X><C-U>'
         endfor
-        for i in keys(s:vimeTablePunct)
-            execute ':inoremap <silent><buffer> '.i.' '.s:vimeTablePunct[i]
-        endfor
         inoremap <silent><buffer> <SPACE> <C-R>=VimeSpace()<CR><C-X><C-U>
-        inoremap <silent><buffer> <BS> <BS><C-X><C-U>
-        inoremap <silent><buffer> ' <C-R>=VimeQuote()<CR>
-        inoremap <silent><buffer> " <C-R>=VimeDoubleQuote()<CR>
+        let b:vimeIsEnabled = 1
+        if exists("b:vimeFullPunct")
+            if b:vimeFullPunct
+                call s:VimeMapPuntuation(1)
+            endif
+        else
+            if g:vimeFullPunct
+                call s:VimeMapPuntuation(1)
+            endif
+        endif
         " Do not bind <CR> since it could be alread used for smart-enter in
         " order to complete \begin{env} \end{env} or braces in TeX / C.
         let b:VimeOldCF = &l:completefunc
@@ -94,7 +130,11 @@ function! VimeSpace()
         let b:vimeShouldCommit = 1
         return ''
     endif
-    return '　'
+    if exists("b:vimePunctMapped") && b:vimePunctMapped
+        return '　'
+    else
+        return ' '
+    endif
 endfunction
 
 function! s:VimeMatchLaTeXStart()
@@ -106,10 +146,11 @@ function! s:VimeMatchLaTeXStart()
     endwhile
     if (start >= 0) && (line[start-1] == '\')
         " Pinyin
-        return start-1
+        let start -= 1
     else
-        return -3
+        let start = -3
     endif
+    return l:start
 endfunction
 
 function! s:VimeMatchChineseStart()
