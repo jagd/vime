@@ -65,3 +65,9 @@ Transforming from RIME style table:
 ```bash
 awk '{printf("%s %08d %08d %s\n",$2,99999999-$3,n++,$1)}' | sort  | awk "{printf(\"\\\\'%s','%s',\\n\",\$1,\$4)}"
 ```
+
+# TODO
+- Complete latex mapping
+- Complete latex tables
+- Use `complete()` instead of `<C-X><C-U>`
+- Switch to `lmap` and `im*`
