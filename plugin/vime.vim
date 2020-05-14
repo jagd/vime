@@ -2,9 +2,9 @@
 "
 " Usage:
 "    Put in vimrc the following maps, here <F12> is taken for example
-"       inoremap <silent><F12> <C-R>=VimeSwitch()<CR>
+"       inoremap <silent><F12>  <C-R>=VimeSwitch()<CR>
 "       inoremap <silent><F12>. <ESC>:call VimeToggleFullPunct()<CR>
-"       nnoremap <silent><F12> :call VimeInverseLookup()<CR>
+"       nnoremap <silent><F12>  :call VimeInverseLookup()<CR>
 "
 "    `let g:vimeDefaultFullPunct = 1` to enable full punctuation by default.
 "         b:vimeFullPunct, if exists, will override g:vimeDefaultFullPunct
@@ -13,38 +13,28 @@
 "    will be automatically disabled.
 "
 " Feature:
-"   - High performance
 "   - Pinyin prefix: #
-"   - Tables are loaded lazily at the first time when it is needed
+"   - LaTeX prefix: \
 "
 
-if exists('g:vime_loaded')
+if exists('g:autoload_vime')
     finish
 endif
 let g:autoload_vime = 1
-let g:vime_loaded = 1
 
 if !exists("g:vimeDefaultFullPunct")
     let g:vimeDefaultFullPunct = 0
 endif
 
-function! s:VimeBufferInit() abort
-    let b:vimeIsEnabled = 0
-    let b:vimeShouldCommit = 0
-    let b:vimeOpenedQuote = 0
-    let b:vimeOpenedDoubleQuote = 0
-    let b:vimeFullPunct = g:vimeDefaultFullPunct
-    let b:vimeFullPunctIsMapped = 0
-endfunction
+" Exported Functions {{{
 
-function! VimeToggleFullPunct()
+function! VimeToggleFullPunct() "{{{
     let b:vimeFullPunct = !b:vimeFullPunct
     call s:VimeMapPuntuation(b:vimeFullPunct)
     return ''
-endfunction
+endfunction "}}}
 
-function! VimeInverseLookup()
-    call s:VimeLoadTable()
+function! VimeInverseLookup() "{{{
     call s:VimeMakeInverseTable()
     let s = strcharpart(getline('.')[col('.') - 1:], 0, 1)
     if len(s) == 0
@@ -54,29 +44,9 @@ function! VimeInverseLookup()
     else
         echo "No result found"
     endif
-endfunction
+endfunction "}}}
 
-function! s:VimeMapPuntuation(shouldMap) abort
-    if a:shouldMap
-        for i in keys(s:vimeTablePunct)
-            execute ':inoremap <silent><buffer> '.i.' '.s:vimeTablePunct[i]
-        endfor
-        inoremap <silent><buffer> <BS> <BS><C-X><C-U>
-        inoremap <silent><buffer> ' <C-R>=VimeQuote()<CR>
-        inoremap <silent><buffer> " <C-R>=VimeDoubleQuote()<CR>
-        let b:vimeFullPunctIsMapped = 1
-    elseif b:vimeFullPunctIsMapped
-        for i in keys(s:vimeTablePunct)
-            execute ':iunmap <buffer> '.i
-        endfor
-        iunmap <buffer> <BS>
-        iunmap <buffer> '
-        iunmap <buffer> "
-        let b:vimeFullPunctIsMapped = 0
-    endif
-endfunction
-
-function! VimeSwitch()
+function! VimeSwitch() "{{{
     if ! exists('b:vimeIsEnabled')
         call s:VimeBufferInit()
     endif
@@ -89,9 +59,9 @@ function! VimeSwitch()
         iunmap <buffer> <SPACE>
         let b:vimeIsEnabled = 0
         call s:VimeMapPuntuation(0)
+        call s:VimeMapLaTeX(0)
         let &l:completefunc = b:VimeOldCF
     else " to Enable
-        call s:VimeLoadTable()
         for i in range(0, 25)
             let c = nr2char(97+i)
             execute ':inoremap <silent><buffer> '.c.' '.c.'<C-X><C-U>'
@@ -100,6 +70,8 @@ function! VimeSwitch()
         let b:vimeIsEnabled = 1
         if b:vimeFullPunct
             call s:VimeMapPuntuation(1)
+        else
+            call s:VimeMapLaTeX(1)
         endif
         " Do not bind <CR> since it could be alread used for smart-enter in
         " order to complete \begin{env} \end{env} or braces in TeX / C.
@@ -107,27 +79,27 @@ function! VimeSwitch()
         let &l:completefunc = "VimeComplete"
     endif
     return ''
-endfunction
+endfunction "}}}
 
-function! VimeQuote()
+function! VimeQuote() "{{{
     let b:vimeOpenedQuote = !b:vimeOpenedQuote
     if b:vimeOpenedQuote
         return '‘'
     else
         return '’'
     endif
-endfunction
+endfunction "}}}
 
-function! VimeDoubleQuote()
+function! VimeDoubleQuote() "{{{
     let b:vimeOpenedDoubleQuote = !b:vimeOpenedDoubleQuote
     if b:vimeOpenedDoubleQuote
         return '“'
     else
         return '”'
     endif
-endfunction
+endfunction "}}}
 
-function! VimeSpace()
+function! VimeSpace() "{{{
     call VimeComplete(1, '')
     if len(b:vimeDefaultOutput)
         let b:vimeShouldCommit = 1
@@ -138,9 +110,57 @@ function! VimeSpace()
     else
         return ' '
     endif
-endfunction
+endfunction "}}}
 
-function! s:VimeMatchLaTeXStart()
+" Exported Functions }}}
+
+" Private Functions {{{
+
+function! s:VimeBufferInit() abort "{{{
+    let b:vimeIsEnabled = 0
+    let b:vimeShouldCommit = 0
+    let b:vimeOpenedQuote = 0
+    let b:vimeOpenedDoubleQuote = 0
+    let b:vimeFullPunct = g:vimeDefaultFullPunct
+    let b:vimeFullPunctIsMapped = 0
+    call s:VimeLoadPinyinTable()
+    call s:VimeLoadLaTeXTable()
+    call s:VimeLoadTable()
+endfunction "}}}
+
+function! s:VimeMapPuntuation(shouldMap) abort "{{{
+    if a:shouldMap
+        for i in keys(s:vimeTablePunct)
+            execute ':inoremap <silent><buffer> '.i.' '.s:vimeTablePunct[i]
+        endfor
+        inoremap <silent><buffer> <BS> <BS><C-X><C-U>
+        inoremap <silent><buffer> ' <C-R>=VimeQuote()<CR>
+        inoremap <silent><buffer> " <C-R>=VimeDoubleQuote()<CR>
+        let b:vimeFullPunctIsMapped = 1
+        call s:VimeMapLaTeX(0)
+    elseif b:vimeFullPunctIsMapped
+        for i in keys(s:vimeTablePunct)
+            execute ':iunmap <buffer> '.i
+        endfor
+        iunmap <buffer> <BS>
+        iunmap <buffer> '
+        iunmap <buffer> "
+        let b:vimeFullPunctIsMapped = 0
+    endif
+endfunction "}}}
+
+function! s:VimeMapLaTeX(shouldMap) abort "{{{
+    if a:shouldMap
+        if b:vimeFullPunctIsMapped
+            return
+        endif
+        let b:vimeLaTeXIsMapped = 1
+    else b:vimeLaTeXIsMapped
+
+    endif
+endfunction "}}}
+
+function! s:VimeMatchLaTeXStart() "{{{
     let line = getline('.')
     let verystart = col('.') - 1
     let start = verystart
@@ -154,9 +174,9 @@ function! s:VimeMatchLaTeXStart()
         let start = -3
     endif
     return l:start
-endfunction
+endfunction "}}}
 
-function! s:VimeMatchChineseStart()
+function! s:VimeMatchChineseStart() "{{{
     let line = getline('.')
     let verystart = col('.') - 1
     let start = verystart
@@ -171,9 +191,9 @@ function! s:VimeMatchChineseStart()
         return -3
     endif
     return start
-endfunction
+endfunction "}}}
 
-function! VimeComplete(findstart, base)
+function! VimeComplete(findstart, base) "{{{
     if a:findstart
         " locate the start of the word
         let start = s:VimeMatchLaTeXStart()
@@ -197,86 +217,26 @@ function! VimeComplete(findstart, base)
             let b:vimeShouldCommit = 0
             return [sym]
         elseif a:base[0] == '#'
-            call s:VimeLoadPinyinTable()
             return s:VimeFindCode(s:vimePinyinTable, a:base[1:], a:base[0])
         elseif (a:base[0] == '\') && (!b:vimeFullPunctIsMapped)
-            call s:VimeLoadLaTeXTable()
             return s:VimeFindCode(s:vimeLaTeXTable, a:base[1:], a:base[0])
         else
             return s:VimeFindCode(s:vimeTable, a:base, '')
         endif
     endif
-endfunction
+endfunction "}}}
 
-function! s:VimeFindCode(table, code, prefix)
-        " default param like prefix='' is supported since vim8.2
-        let codelen = len(a:code)
-        if codelen == 0
-            return {}
-        endif
-        let start = s:VimeFindMatch(a:table, a:code)
-        let end = start  " end is an open interval boundary i.e., [start, end)
-        let tablelen = len(a:table)/2
-        " find the exact matches
-        while (end < tablelen) && (a:table[end*2] == a:code)
-            let end += 1
-        endwhile
-        let numAdditionalPrompt = 10
-        while numAdditionalPrompt  > 0
-            \ && (end < tablelen)
-            \ && strpart(a:table[end*2], 0, codelen) == a:code
-            let end += 1
-            let numAdditionalPrompt -= 1
-        endwhile
-        let words = [{'word': a:prefix.a:code}]
-        for i in range(start, end-1)
-            call add(words, {'word': a:table[2*i+1], 'menu': a:prefix.a:table[2*i]})
-        endfor
-        " refresh always cannot handle <BS>, therefore use a inoremap
-        return {'words': words}
-    endif
-endfunction
+" IME table operations {{{
 
-function! s:VimeMakeInverseTable()
-    if exists("s:inverseTable")
-        return
-    endif
-    let s:inverseTable = {}
-    let tablelen = len(s:vimeTable)/2
-    for i in range(tablelen)
-        let c = s:vimeTable[i*2]
-        let s = s:vimeTable[i*2+1]
-        if exists('s:inverseTable["'.s.'"]')
-            let s:inverseTable[s] = s:inverseTable[s] .' | '. c
-        else
-            let s:inverseTable[s] =  c
-        endif
-    endfor
-endfunction
-
-function! s:VimeLoadPinyinTable()
-    if exists("s:vimePinyinTable")
-        return
-    endif
-    runtime vime-table-pinyin.txt
-    let s:vimePinyinTable = g:vimeTable
-endfunction
-
-function! s:VimeLoadLaTeXTable()
-    if exists("s:vimeLaTeXTable")
-        return
-    endif
-    runtime vime-table-latex.txt
-    let s:vimeLaTeXTable = g:vimeTable
-endfunction
-
-function! s:VimeLoadTable()
+function! s:VimeLoadTable() "{{{
+    " load the main table
     if exists("s:vimeTable")
         return
     endif
     runtime vime-table.txt
     let s:vimeTable = g:vimeTable
     unlet g:vimeTable
+    "{{{
     let s:vimeTablePunct = {
         \'0':'０',
         \'1':'１',
@@ -310,11 +270,75 @@ function! s:VimeLoadTable()
         \']':'」',
         \'^':'…',
     \ }
+    "}}}
     call assert_true(len(s:vimeTable) % 2 == 0)
     call assert_true(len(s:vimeTablePunct) % 2 == 0)
-endfunction
+endfunction "}}}
 
-function! s:VimeFindMatch(table, code)
+function! s:VimeLoadPinyinTable() "{{{
+    if exists("s:vimePinyinTable")
+        return
+    endif
+    runtime vime-table-pinyin.txt
+    let s:vimePinyinTable = g:vimeTable
+endfunction "}}}
+
+function! s:VimeLoadLaTeXTable() "{{{
+    if exists("s:vimeLaTeXTable")
+        return
+    endif
+    runtime vime-table-latex.txt
+    let s:vimeLaTeXTable = g:vimeTable
+endfunction "}}}
+
+function! s:VimeMakeInverseTable() "{{{
+    if exists("s:inverseTable")
+        return
+    endif
+    call s:VimeLoadTable()
+    let s:inverseTable = {}
+    let tablelen = len(s:vimeTable)/2
+    for i in range(tablelen)
+        let c = s:vimeTable[i*2]
+        let s = s:vimeTable[i*2+1]
+        if exists('s:inverseTable["'.s.'"]')
+            let s:inverseTable[s] = s:inverseTable[s] .' | '. c
+        else
+            let s:inverseTable[s] =  c
+        endif
+    endfor
+endfunction "}}}
+
+function! s:VimeFindCode(table, code, prefix) "{{{
+        " default param like prefix='' is supported since vim8.2
+        let codelen = len(a:code)
+        if codelen == 0
+            return {}
+        endif
+        let start = s:VimeFindMatch(a:table, a:code)
+        let end = start  " end is an open interval boundary i.e., [start, end)
+        let tablelen = len(a:table)/2
+        " find the exact matches
+        while (end < tablelen) && (a:table[end*2] == a:code)
+            let end += 1
+        endwhile
+        let numAdditionalPrompt = 10
+        while numAdditionalPrompt  > 0
+            \ && (end < tablelen)
+            \ && strpart(a:table[end*2], 0, codelen) == a:code
+            let end += 1
+            let numAdditionalPrompt -= 1
+        endwhile
+        let words = [{'word': a:prefix.a:code}]
+        for i in range(start, end-1)
+            call add(words, {'word': a:table[2*i+1], 'menu': a:prefix.a:table[2*i]})
+        endfor
+        " refresh always cannot handle <BS>, therefore use a inoremap
+        return {'words': words}
+    endif
+endfunction "}}}
+
+function! s:VimeFindMatch(table, code) "{{{
     " Parameters: a:table is a list, which is passed by reference
     " Return: The first index(/2) of the match;  If not found, returns the
     " index(/2) i, where tablecode[i] < code, where i*2 <= len(a:table)
@@ -350,4 +374,10 @@ function! s:VimeFindMatch(table, code)
         endif
     endif
     return bd1
-endfunction
+endfunction "}}}
+
+" IME table operations }}}
+
+" Private Functions }}}
+
+" vi:fdm=marker
