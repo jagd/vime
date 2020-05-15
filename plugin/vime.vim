@@ -26,11 +26,18 @@ if !exists("g:vimeDefaultFullPunct")
     let g:vimeDefaultFullPunct = 0
 endif
 
+augroup VIME
+autocmd!
+autocmd BufEnter * call s:VimeBufferInit()
+augroup END
+
 " Exported Functions {{{
 
 function! VimeToggleFullPunct() "{{{
-    let b:vimeFullPunct = !b:vimeFullPunct
-    call s:VimeMapPuntuation(b:vimeFullPunct)
+    if b:vimeIsEnabled
+        let b:vimeFullPunct = !b:vimeFullPunct
+        call s:VimeMapPuntuation(b:vimeFullPunct)
+    endif
     return ''
 endfunction "}}}
 
@@ -47,9 +54,6 @@ function! VimeInverseLookup() "{{{
 endfunction "}}}
 
 function! VimeSwitch() "{{{
-    if ! exists('b:vimeIsEnabled')
-        call s:VimeBufferInit()
-    endif
     let b:vimeDefaultOutput = ''
     if b:vimeIsEnabled " to Disable
         for i in range(0, 25)
@@ -117,12 +121,16 @@ endfunction "}}}
 " Private Functions {{{
 
 function! s:VimeBufferInit() abort "{{{
+    if exists('b:vimeIsEnabled')
+        return
+    endif
     let b:vimeIsEnabled = 0
     let b:vimeShouldCommit = 0
     let b:vimeOpenedQuote = 0
     let b:vimeOpenedDoubleQuote = 0
     let b:vimeFullPunct = g:vimeDefaultFullPunct
     let b:vimeFullPunctIsMapped = 0
+    let b:vimeLaTeXIsMapped = 0
     call s:VimeLoadPinyinTable()
     call s:VimeLoadLaTeXTable()
     call s:VimeLoadTable()
@@ -130,6 +138,7 @@ endfunction "}}}
 
 function! s:VimeMapPuntuation(shouldMap) abort "{{{
     if a:shouldMap
+        call s:VimeMapLaTeX(0)
         for i in keys(s:vimeTablePunct)
             execute ':inoremap <silent><buffer> '.i.' '.s:vimeTablePunct[i]
         endfor
@@ -137,7 +146,6 @@ function! s:VimeMapPuntuation(shouldMap) abort "{{{
         inoremap <silent><buffer> ' <C-R>=VimeQuote()<CR>
         inoremap <silent><buffer> " <C-R>=VimeDoubleQuote()<CR>
         let b:vimeFullPunctIsMapped = 1
-        call s:VimeMapLaTeX(0)
     elseif b:vimeFullPunctIsMapped
         for i in keys(s:vimeTablePunct)
             execute ':iunmap <buffer> '.i
@@ -149,22 +157,46 @@ function! s:VimeMapPuntuation(shouldMap) abort "{{{
     endif
 endfunction "}}}
 
+let s:latexSpecialSymbols = split("+-=_^()\"`'" ,'\zs')
+
 function! s:VimeMapLaTeX(shouldMap) abort "{{{
     if a:shouldMap
         if b:vimeFullPunctIsMapped
             return
         endif
+        for i in range(0, 25)
+            let c = nr2char(65+i)
+            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-X><C-U>'
+        endfor
+        for i in range(0, 9)
+            let c = nr2char(48+i)
+            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-X><C-U>'
+        endfor
+        for c in s:latexSpecialSymbols
+            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-X><C-U>'
+        endfor
         let b:vimeLaTeXIsMapped = 1
-    else b:vimeLaTeXIsMapped
-
+    elseif b:vimeLaTeXIsMapped
+        for i in range(0, 25)
+            let c = nr2char(65+i)
+            execute ':iunmap <buffer> '.c
+        endfor
+        for i in range(0, 9)
+            let c = nr2char(48+i)
+            execute ':iunmap <buffer> '.c
+        endfor
+        for c in s:latexSpecialSymbols
+            execute ':iunmap <buffer> '.c
+        endfor
+        let b:vimeLaTeXIsMapped = 0
     endif
-endfunction "}}}
+endfunction }}}
 
 function! s:VimeMatchLaTeXStart() "{{{
     let line = getline('.')
     let verystart = col('.') - 1
     let start = verystart
-    while start >= 0 && line[start-1] =~ "[-=a-zA-Z0-9+'`_^()]"
+    while start >= 0 && line[start-1] =~ "[-=a-zA-Z0-9+'`_^()\"]"
         let start -= 1
     endwhile
     if (start >= 0) && (line[start-1] == '\')
