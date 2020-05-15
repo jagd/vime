@@ -24,10 +24,10 @@ call plug#begin(...)
    ```
 
 ## 拼音
-- 前导符号 `#` 
+- 前导符号 `#`
 
 ## 全角
-- 全角时 LaTeX 自动关闭。 
+- 全角时 LaTeX 自动关闭。
 - 默认关闭全角，若设为默认开启:
   ```vim
   let g:vimeDefaultFullPunct = 1`
