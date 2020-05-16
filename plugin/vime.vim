@@ -61,16 +61,17 @@ function! VimeSwitch() "{{{
             execute ':iunmap <buffer> '.c
         endfor
         iunmap <buffer> <SPACE>
+        iunmap <buffer> <BS>
         let b:vimeIsEnabled = 0
         call s:VimeMapPuntuation(0)
         call s:VimeMapLaTeX(0)
-        let &l:completefunc = b:VimeOldCF
     else " to Enable
         for i in range(0, 25)
             let c = nr2char(97+i)
-            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-X><C-U>'
+            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-R>=VimeComplete()<CR>'
         endfor
-        inoremap <silent><buffer> <SPACE> <C-R>=VimeSpace()<CR><C-X><C-U>
+        inoremap <silent><buffer> <SPACE> <C-R>=VimeSpace()<CR>
+        inoremap <silent><buffer> <BS> <BS><C-R>=VimeComplete()<CR>
         let b:vimeIsEnabled = 1
         if b:vimeFullPunct
             call s:VimeMapPuntuation(1)
@@ -79,8 +80,6 @@ function! VimeSwitch() "{{{
         endif
         " Do not bind <CR> since it could be alread used for smart-enter in
         " order to complete \begin{env} \end{env} or braces in TeX / C.
-        let b:VimeOldCF = &l:completefunc
-        let &l:completefunc = "VimeComplete"
     endif
     return ''
 endfunction "}}}
@@ -104,10 +103,9 @@ function! VimeDoubleQuote() "{{{
 endfunction "}}}
 
 function! VimeSpace() "{{{
-    call VimeComplete(1, '')
     if len(b:vimeDefaultOutput)
         let b:vimeShouldCommit = 1
-        return ''
+        return VimeComplete()
     endif
     if b:vimeFullPunctIsMapped
         return '　'
@@ -142,7 +140,6 @@ function! s:VimeMapPuntuation(shouldMap) abort "{{{
         for i in keys(s:vimeTablePunct)
             execute ':inoremap <silent><buffer> '.i.' '.s:vimeTablePunct[i]
         endfor
-        inoremap <silent><buffer> <BS> <BS><C-X><C-U>
         inoremap <silent><buffer> ' <C-R>=VimeQuote()<CR>
         inoremap <silent><buffer> " <C-R>=VimeDoubleQuote()<CR>
         let b:vimeFullPunctIsMapped = 1
@@ -150,7 +147,6 @@ function! s:VimeMapPuntuation(shouldMap) abort "{{{
         for i in keys(s:vimeTablePunct)
             execute ':iunmap <buffer> '.i
         endfor
-        iunmap <buffer> <BS>
         iunmap <buffer> '
         iunmap <buffer> "
         let b:vimeFullPunctIsMapped = 0
@@ -166,14 +162,14 @@ function! s:VimeMapLaTeX(shouldMap) abort "{{{
         endif
         for i in range(0, 25)
             let c = nr2char(65+i)
-            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-X><C-U>'
+            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-R>=VimeComplete()<CR>'
         endfor
         for i in range(0, 9)
             let c = nr2char(48+i)
-            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-X><C-U>'
+            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-R>=VimeComplete()<CR>'
         endfor
         for c in s:latexSpecialSymbols
-            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-X><C-U>'
+            execute ':inoremap <silent><buffer> '.c.' '.c.'<C-R>=VimeComplete()<CR>'
         endfor
         let b:vimeLaTeXIsMapped = 1
     elseif b:vimeLaTeXIsMapped
@@ -225,37 +221,50 @@ function! s:VimeMatchChineseStart() "{{{
     return start
 endfunction "}}}
 
-function! VimeComplete(findstart, base) "{{{
-    if a:findstart
+function! VimeComplete() "{{{
         " locate the start of the word
+        " the start var is compatible to `completefunc`
         let start = s:VimeMatchLaTeXStart()
-        if start >= 0
-            return start
+        if start < 0
+            let start = s:VimeMatchChineseStart()
+            if start < 0
+                " mismatched:
+                let b:vimeDefaultOutput=''
+                return ''
+            endif
         endif
-        let start = s:VimeMatchChineseStart()
-        if start >= 0
-            return start
+
+        let end = col('.')-1
+        if l:start > l:end-1
+            return ''
         endif
-        " otherwise: mismatched
-        let b:vimeDefaultOutput=''
-        return -3
-    else
-        if len(a:base) == 0
+        let base = getline('.')[l:start : l:end]
+
+        " start was compatible with `completefunc`
+        " to make it be compatible with `complete()`, we need +1
+        let start += 1
+
+        let prefix=''
+        if (l:base[0] == '#') || (l:base[0] == '\')
+            let prefix = l:base[0]
+            let base = l:base[1:]
+        endif
+        if len(l:base) == 0
             return []
         endif
         if b:vimeShouldCommit
             let sym = b:vimeDefaultOutput
             let b:vimeDefaultOutput = ''
             let b:vimeShouldCommit = 0
-            return [sym]
-        elseif a:base[0] == '#'
-            return s:VimeFindCode(s:vimePinyinTable, a:base[1:], a:base[0])
-        elseif (a:base[0] == '\') && (!b:vimeFullPunctIsMapped)
-            return s:VimeFindCode(s:vimeLaTeXTable, a:base[1:], a:base[0])
+            call complete(start, [sym])
+        elseif l:prefix == '#'
+            call complete(start, s:VimeFindCode(s:vimePinyinTable, l:base, l:prefix))
+        elseif (l:prefix == '\') && (!b:vimeFullPunctIsMapped)
+            call complete(start, s:VimeFindCode(s:vimeLaTeXTable, l:base, l:prefix))
         else
-            return s:VimeFindCode(s:vimeTable, a:base, '')
+            call complete(start, s:VimeFindCode(s:vimeTable, l:base, l:prefix))
         endif
-    endif
+        return ''
 endfunction "}}}
 
 " IME table operations {{{
@@ -365,8 +374,11 @@ function! s:VimeFindCode(table, code, prefix) "{{{
         for i in range(start, end-1)
             call add(words, {'word': a:table[2*i+1], 'menu': a:prefix.a:table[2*i]})
         endfor
-        " refresh always cannot handle <BS>, therefore use a inoremap
-        return {'words': words}
+        " In case of `completefunc`:
+        " 'refresh always' in complete cannot handle <BS>, therefore use a inoremap
+        "   return {'words': words}
+        " Otherwise, for `complete()`:
+        return words
     endif
 endfunction "}}}
 
