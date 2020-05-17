@@ -86,6 +86,5 @@ awk '{printf("%s %08d %08d %s\n",$2,99999999-$3,n++,$1)}' | sort  | awk "{printf
 # Known Issues
 - 一些 Unicode 符号（比如粗体/Fraktur字母）与一些国标扩展的汉字在 GVim 中有残影，`set rop` 无法解决。NeoVim-Qt 中渲染正常。
 
-# TODO
-- Migrate to `lmap` and `im*`
-- Use keymap instead of calling functions?
+# Implementation Notes:
+- `lmap` is not helpful in this case, as `complete()` function cannot be invoked in command line mode nor useless in search mode.
