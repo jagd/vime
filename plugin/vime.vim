@@ -84,36 +84,6 @@ function! VimeSwitch() "{{{
     return ''
 endfunction "}}}
 
-function! VimeQuote() "{{{
-    let b:vimeOpenedQuote = !b:vimeOpenedQuote
-    if b:vimeOpenedQuote
-        return '‘'
-    else
-        return '’'
-    endif
-endfunction "}}}
-
-function! VimeDoubleQuote() "{{{
-    let b:vimeOpenedDoubleQuote = !b:vimeOpenedDoubleQuote
-    if b:vimeOpenedDoubleQuote
-        return '“'
-    else
-        return '”'
-    endif
-endfunction "}}}
-
-function! VimeSpace() "{{{
-    if len(b:vimeDefaultOutput)
-        let b:vimeShouldCommit = 1
-        return VimeComplete()
-    endif
-    if b:vimeFullPunctIsMapped
-        return '　'
-    else
-        return ' '
-    endif
-endfunction "}}}
-
 " Exported Functions }}}
 
 " Private Functions {{{
@@ -153,8 +123,37 @@ function! s:VimeMapPuntuation(shouldMap) abort "{{{
     endif
 endfunction "}}}
 
-let s:latexSpecialSymbols = split("+-=_^()\"`'" ,'\zs')
+function! VimeQuote() "{{{
+    let b:vimeOpenedQuote = !b:vimeOpenedQuote
+    if b:vimeOpenedQuote
+        return '‘'
+    else
+        return '’'
+    endif
+endfunction "}}}
 
+function! VimeDoubleQuote() "{{{
+    let b:vimeOpenedDoubleQuote = !b:vimeOpenedDoubleQuote
+    if b:vimeOpenedDoubleQuote
+        return '“'
+    else
+        return '”'
+    endif
+endfunction "}}}
+
+function! VimeSpace() "{{{
+    if len(b:vimeDefaultOutput)
+        let b:vimeShouldCommit = 1
+        return VimeComplete()
+    endif
+    if b:vimeFullPunctIsMapped
+        return '　'
+    else
+        return ' '
+    endif
+endfunction "}}}
+
+let s:latexSpecialSymbols = split("+-=_^()\"`'" ,'\zs')
 function! s:VimeMapLaTeX(shouldMap) abort "{{{
     if a:shouldMap
         if b:vimeFullPunctIsMapped
