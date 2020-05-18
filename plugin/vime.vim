@@ -233,11 +233,12 @@ function! VimeComplete() "{{{
             endif
         endif
 
-        let end = col('.')-1
-        if l:start > l:end-1
+        let endcol = col('.')-1
+        if l:start > l:endcol-1
             return ''
         endif
-        let base = getline('.')[l:start : l:end]
+        " vim [range] is close ended and start from 0
+        let base = getline('.')[l:start : (l:endcol-1)]
 
         " start was compatible with `completefunc`
         " to make it be compatible with `complete()`, we need +1
