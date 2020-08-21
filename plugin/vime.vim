@@ -312,8 +312,10 @@ function! s:VimeLoadTable() "{{{
         \'^':'…',
     \ }
     "}}}
-    call assert_true(len(s:vimeTable) % 2 == 0)
-    call assert_true(len(s:vimeTablePunct) % 2 == 0)
+    if v:version >= 801
+        call assert_true(len(s:vimeTable) % 2 == 0)
+        call assert_true(len(s:vimeTablePunct) % 2 == 0)
+    endif
 endfunction "}}}
 
 function! s:VimeLoadPinyinTable() "{{{
