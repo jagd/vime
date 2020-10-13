@@ -11,18 +11,18 @@ call plug#begin(...)
 ```
 
 ## 制定快捷键
-比如用 `F12`：
+比如用 `Ctrl`+`_`：
 - 汉 / Latin 切换（插入模式）
   ```vim
-  inoremap <silent><F12>  <C-R>=VimeSwitch()<CR>
+  inoremap <silent><C-_>  <C-R>=VimeSwitch()<CR>
   ```
 - 半角 / 全角（插入模式）
   ```vim
-  inoremap <silent><F12>. <C-R>=VimeToggleFullPunct()<CR>
+  inoremap <silent><C-_>. <C-R>=VimeToggleFullPunct()<CR>
   ```
 - 反查码表（普通模式）
   ```vim
-  nnoremap <silent><F12>  :call VimeInverseLookup()<CR>
+  nnoremap <silent><C-_>  :call VimeInverseLookup()<CR>
    ```
 
 ## 拼音
