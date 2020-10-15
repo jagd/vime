@@ -196,6 +196,7 @@ let g:vimeTable = [
 \'clubsuit','♧',
 \'cmark','✓',
 \'coloncolon','∷',
+\'coloneqq','≔',
 \'complement','∁',
 \'cong','≅',
 \'copyright','©',
