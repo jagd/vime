@@ -11,7 +11,7 @@ call plug#begin(...)
 ```
 
 ## 制定快捷键
-比如用 `Ctrl`+`_`：
+比如用 `Ctrl`+`_` （有些OS中需要设置`imap <silent><C-S-_> <C-_>`）：
 - 汉 / Latin 切换（插入模式）
   ```vim
   inoremap <silent><C-_>  <C-R>=VimeSwitch()<CR>
