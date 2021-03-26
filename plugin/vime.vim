@@ -185,7 +185,7 @@ function! s:VimeMapLaTeX(shouldMap) abort "{{{
         endfor
         let b:vimeLaTeXIsMapped = 0
     endif
-endfunction }}}
+endfunction "}}}
 
 function! s:VimeMatchLaTeXStart() "{{{
     let line = getline('.')
