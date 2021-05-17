@@ -1386,6 +1386,7 @@ let g:vimeTable = [
 \'nVdash','⊯',
 \'nabla','∇',
 \'natural','♮',
+\'nbsp',' ',
 \'ncong','≇',
 \'nearrow','↗',
 \'neq','≠',
