@@ -66,6 +66,7 @@ function! VimeSwitch() "{{{
         call s:VimeMapPuntuation(0)
         call s:VimeMapLaTeX(0)
     else " to Enable
+        call s:VimLoadAllTablesOnce()
         for i in range(0, 25)
             let c = nr2char(97+i)
             execute ':inoremap <silent><buffer> '.c.' '.c.'<C-R>=VimeComplete()<CR>'
@@ -99,9 +100,15 @@ function! s:VimeBufferInit() abort "{{{
     let b:vimeFullPunct = g:vimeDefaultFullPunct
     let b:vimeFullPunctIsMapped = 0
     let b:vimeLaTeXIsMapped = 0
-    call s:VimeLoadPinyinTable()
-    call s:VimeLoadLaTeXTable()
-    call s:VimeLoadTable()
+endfunction "}}}
+
+function! s:VimLoadAllTablesOnce() abort "{{{
+    if !exists('s:vimeAllTablesLoaded')
+        call s:VimeLoadPinyinTable()
+        call s:VimeLoadLaTeXTable()
+        call s:VimeLoadTable()
+        let s:vimeAllTablesLoaded = 1
+    endif
 endfunction "}}}
 
 function! s:VimeMapPuntuation(shouldMap) abort "{{{
