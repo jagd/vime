@@ -56,6 +56,7 @@ endfunction "}}}
 function! VimeSwitch() "{{{
     let b:vimeDefaultOutput = ''
     if b:vimeIsEnabled " to Disable
+        exe 'set cot='.b:completeopt_backup
         for i in range(0, 25)
             let c = nr2char(97+i)
             execute ':iunmap <buffer> '.c
@@ -66,6 +67,8 @@ function! VimeSwitch() "{{{
         call s:VimeMapPuntuation(0)
         call s:VimeMapLaTeX(0)
     else " to Enable
+        let b:completeopt_backup = &cot
+        exe 'set cot=menu,menuone'
         call s:VimLoadAllTablesOnce()
         for i in range(0, 25)
             let c = nr2char(97+i)
@@ -100,10 +103,12 @@ function! s:VimeBufferInit() abort "{{{
     let b:vimeFullPunct = g:vimeDefaultFullPunct
     let b:vimeFullPunctIsMapped = 0
     let b:vimeLaTeXIsMapped = 0
+    let b:completeopt_backup = ''
 endfunction "}}}
 
 function! s:VimLoadAllTablesOnce() abort "{{{
     if !exists('s:vimeAllTablesLoaded')
+        call s:VimeLoadWubiTable()
         call s:VimeLoadPinyinTable()
         call s:VimeLoadLaTeXTable()
         call s:VimeLoadTable()
@@ -268,6 +273,8 @@ function! VimeComplete() "{{{
             call complete(start, s:VimeFindCode(s:vimePinyinTable, l:base, l:prefix))
         elseif (l:prefix == '\') && (!b:vimeFullPunctIsMapped)
             call complete(start, s:VimeFindCode(s:vimeLaTeXTable, l:base, l:prefix))
+        elseif (l:prefix == '@') && (!b:vimeFullPunctIsMapped)
+            call complete(start, s:VimeFindCode(s:vimeWubiTable, l:base, l:prefix))
         else
             call complete(start, s:VimeFindCode(s:vimeTable, l:base, l:prefix))
         endif
@@ -323,6 +330,14 @@ function! s:VimeLoadTable() "{{{
         call assert_true(len(s:vimeTable) % 2 == 0)
         call assert_true(len(s:vimeTablePunct) % 2 == 0)
     endif
+endfunction "}}}
+
+function! s:VimeLoadWubiTable() "{{{
+    if exists("s:vimeWubiTable")
+        return
+    endif
+    runtime vime-table-wubi86.txt
+    let s:vimeWubiTable = g:vimeTable
 endfunction "}}}
 
 function! s:VimeLoadPinyinTable() "{{{
